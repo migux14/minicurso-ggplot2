@@ -1,0 +1,636 @@
+---
+title: "Curso de ggplot2"
+author: "Miguel Conforto"
+date: "2022-10-12"
+output: html_document
+---
+# Instalando o ggplot2
+```{r, eval = FALSE}
+install.packages("ggplot2") #Realiza a instalação do pacote
+```
+```{r, message = FALSE}
+library(ggplot2) #carrega o pacote na sessão
+```
+
+**OBS.:** Caso não queira usar o comando *library*, é possível chamar o pacote da seguinte maneira:
+
+```{r, eval = FALSE}
+ggplot2::
+```
+Apesar de parecer contraprodutivo chamar o pacote dessa forma, a boa prática de programação nos diz que é a maneira correta de fazê-lo.
+
+## Carregando as bases
+Para realizar os exemplos do curso foram disponibilizadas algumas bases com dados de renda média da PNAD de 2018 e 2019.
+
+É aconselhável criar um novo projeto em R para facilitar o carregamento e organização ao longo do curso.
+
+```{r}
+#Carregando bases de renda media por UF e Sexo
+base_sexo.18 <- read.csv2("bases/renda_media_sexo18.csv")
+base_sexo.19 <- read.csv2("bases/renda_media_sexo19.csv")
+
+#Carregando bases de renda media por UF e Raca/Cor
+base_raca.18 <- read.csv2("bases/renda_media_raca18.csv")
+base_raca.19 <- read.csv2("bases/renda_media_raca19.csv")
+
+#Carregando base de tempo de estudo por Sexo
+base_estudo.19 <- read.csv2("bases/tempo_estudo19.csv")
+
+#Carregando bases de renda media por Sexo e Raca/Cor
+base_sexoraca.18 <- read.csv2("bases/renda_media_sexoraca18.csv")
+base_sexoraca.19 <- read.csv2("bases/renda_media_sexoraca19.csv")
+```
+
+Como iremos utilizar o comando pipe **%>%** temos que carregar o pacote dplyr também.
+
+```{r, eval = FALSE}
+install.packages("dplyr")
+```
+```{r, message = FALSE}
+library(dplyr)
+```
+
+# Comando qplot()
+O comando **qplo()** ( *Quick Plot* ) é um atalho para criar gráficos em ggplot2 de maneira rápida e com poucos parâmetros na função.
+
+```{r}
+qplot(base_sexo.18$V2007, base_sexo.18$V403312)
+```
+<br/> Esse comando possui algumas desvantagens.
+<br/> Embora seja possível alterar a geometria do gráfico que vem por definição como __geom = "auto"__, a função é "rígida" quando comparada as demais funções do pacote, tirando a liberdade criativa do pacote.
+
+# Criando um objeto em ggplot2
+Nessa parte será definido o cerne do ggplot2: O comando **ggplot** e **aes()**.
+<br/> Esses comandos são responsáveis por criar a estética do gráfico. Atráves deles definimos a base, variáveis, filtros, cores e afins.
+<br/> Vamos criar uma estética para o gráfico de Renda média por Sexo da PNAD de 2018:
+
+```{r}
+base_sexo.18 %>% ggplot(
+  mapping = aes( #"Mapeando" o grafico atraves do comando aes()
+    x = V2007, #Definindo a variavel do eixo X
+    y = V403312 #Definindo a variavel do eixo Y
+  )
+)
+```
+
+<br/> Naturalmente nenhum gráfico foi gerado, isto porque ainda não foi escolhida uma geometria para os dados, apenas uma estética.
+
+# Geometrias para gráficos ggplot2
+## geom_bar()
+<br/> A partir de agora serão inseridas as geometrias e os gráficos começarão a ser elaborados de fato.
+<br/> Refazendo o último exemplo agora com a geometria inserida no código:
+
+```{r}
+base_sexo.18 %>% ggplot(
+  mapping = aes(
+    x = V2007,
+    y = V403312
+  )) +
+  geom_bar(stat = "identity") 
+```
+
+```{r}
+base_sexo.18 %>% ggplot(
+  mapping = aes(
+    x = V2007,
+    y = V403312
+  )) +
+  geom_col()
+```
+
+<br/> Como a estética do gráfico tem dois vetores de informações (V2007 e V403312), o parâmetro *stats = "identity"* deve ser inserido. Isso porque o comando **geom_bar()** torna a altura da barra proporcional ao número de barras em cada grupo (realiza uma contagem "count") dentro do próprio vetor, ou seja, para criar um gráfico de barras proporcionais ou por contagem seria necessário inserir apenas as informações do eixo x na estética.
+
+```{r}
+base_sexo.18 %>% ggplot(
+  mapping = aes(
+    x = V2007
+  )) +
+  geom_bar(fill = "skyblue") 
+```
+
+### Exercício:
+<br/> Reproduza o seguinte gráfico utilizando a base *base_sexo.19*
+
+```{r}
+base_sexo.19 %>% ggplot(
+  mapping = aes(
+    x = V2007,
+    y = V403312
+  )) +
+  geom_col(fill = "skyblue")
+```
+
+<br/> Agora vamos estilizar e dar novas cores para o gráfico, adicionar filtros e rótulos.
+
+```{r}
+base_sexo.18 %>% ggplot(
+  aes(
+    x = V2007,
+    y = V403312,
+    fill = UF) #Adicionar um filtro/legenda ao grafico
+  ) +
+  geom_bar(stat = "identity") +
+  labs( #Comando para alterar os rotulos do grafico
+    title = "Renda media por Sexo", #Titulo
+    subtitle = "PNAD 2018" #Subtitulo
+  ) + 
+  guides( #Comando para alterar os rotulos nos guias do grafico
+    x = guide_axis(title = "Sexo"), #Rotulo eixo X
+    y = guide_axis(title = "Renda"), #Rotulo eixo Y
+    fill = guide_legend(title = "Unidade da federacao") #Rotulo legenda
+  )
+```
+
+<br/> É evidente que dessa maneira o gráfico perde seu intuito de resumir informações de forma rápida e compreensível.
+<br/> Vamos alterar alguns eixos e tentar deixá-lo mais apresentável.
+
+```{r}
+base_sexo.18 %>% ggplot(
+  aes(
+    x = UF, #Colocando UF no eixo X
+    y = V403312,
+    fill = V2007) #Colocando Sexo como filtro
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Sexo")
+  )
+```
+
+<br/> Ainda pode haver uma dificuldade em compreender a diferença de renda entre homem e mulheres através desse gráfico. Para resolver isso podemos facetar o gráfico.
+
+<br/> Facetando por linhas
+
+```{r}
+base_sexo.18 %>% ggplot(
+  aes(
+    x = UF,
+    y = V403312,
+    fill = V2007
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Sexo")
+  ) + 
+  facet_grid( #Facetando o grafico pela variavel Sexo
+    rows = vars(V2007)
+    )
+```
+
+
+<br/> Facetando por colunas
+```{r}
+base_sexo.18 %>% ggplot(
+  aes(
+    x = UF,
+    y = V403312,
+    fill = V2007
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Sexo")
+  ) + 
+  facet_grid( #Facetando o grafico pela variavel Sexo
+    cols = vars(V2007)
+    )
+```
+
+
+<br/> Observe que nesse caso o Filtro se torna inútil, sendo assim podemos tirar ele e adicionar outras cores ao gráfico, ou melhor, adicionar um filtro que nos permita ver a diferença de salários através da coloração das barras.
+
+```{r}
+base_sexo.18 %>% ggplot(
+  aes(
+    x = UF,
+    y = V403312,
+    fill = V403312 #Utilizando o proprio eixo Y como filtro
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Renda bruta media")
+  ) + 
+  facet_grid(
+    rows = vars(V2007)
+    ) +
+  scale_fill_gradient() #Esse comando apenas dita qual sera o gradiente da escala
+```
+
+### Exercício:
+<br/> Reproduza o seguinte gráfico utilizando a base *base_sexo.19*
+
+```{r}
+base_sexo.19 %>% ggplot(
+  aes(
+    x = UF,
+    y = V403312,
+    fill = V403312
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Renda bruta media")
+  ) + 
+  facet_grid( #Facetando o grafico pela variavel Sexo
+    cols = vars(V2007)
+    ) +
+  scale_fill_viridis_b()
+```
+
+## geom_point()
+<br/> Esse comando cria gráficos de pontos (gráficos de dispersão)
+<br/> Vamos criar um gráfico de dispersão com os dados da *base_estudo.19*
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = V12, #Tempo desocupado
+    y = estudo_med) #Média do tempo de estudo
+  ) +
+  geom_point()
+```
+
+<br/> Assim como nos gráficos anteriores, há uma inifinade de mudanças que podem ser feitas com filtros, facetas e afins nesse gráfico.
+
+### Exercício:
+<br/> Reproduza o gráfico a seguir com tudo que foi visto até o momento
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = estudo_med,
+    y = V12,
+    fill = V2007)
+  ) +
+  geom_point() +
+  facet_grid(vars(V2007)) +
+  labs(
+    title = "Tempo desocupado x Tempo de estudo",
+    subtitle = "PNADc 2019.1"
+  ) +
+  guides(
+    x = guide_axis(title = "Tempo de estudo (Media)"), 
+    y = guide_axis(title = "Tempo desocupado (Meses)")
+  )
+  
+```
+
+<br/> Nos gráficos de dispersão a opção *fill* não gera alteração aparente, para isso utilizamos a opção *colour* que tem o mesmo efeito que o filtro nos gráficos de pontos.
+<br/> Também é muito comum fazer uma relação linear entre as variáveis nesse tipo de gráfico. Para isso temos os seguintes argumentos que podem ser implementados ao gráfico:
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes( #Estetica do grafico
+    x = estudo_med, #Tempo de estudo no eixo X
+    y = V12, #Tempo desocupado no eixo Y
+    colour = V2007) #Sexo como "Filtro"
+  ) +
+  geom_point() + #Geometria de pontos
+  facet_grid(vars(V2007)) + #Facetando o grafico por Sexo
+  labs( #Rotulos do grafico
+    title = "Tempo desocupado x Tempo de estudo", #Titulo do grafico
+    subtitle = "PNADc 2019.1" #Subtitulo do grafico
+  ) +
+  guides( #Guias do grafico
+    x = guide_axis(title = "Tempo de estudo (Media)"), #Rotulo eixo X
+    y = guide_axis(title = "Tempo desocupado (Meses)"), #Rotulo eixo Y
+    colour = guide_legend(title = "Sexo") #Rotulo da legenda
+  ) +
+  geom_smooth( #Adicionando uma linha de tendencia ao grafico
+    method = lm, #Metodo de regressao linear
+    colour = "red", #Escolhendo a cor da linha de tendencia
+    se = TRUE #Adicionando os desvios em relacao a reta
+  )
+```
+
+<br/> Ainda existem algumas mudanças interessantes que podem ser feitas no gráfico de pontos e não podem ser feitas no gráfico de barras ou afins.
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = estudo_med, 
+    y = V12, 
+    colour = V2007) #Sexo como "Filtro"
+  ) +
+  geom_point() +
+  labs(
+    title = "Tempo desocupado x Tempo de estudo",
+    subtitle = "PNADc 2019.1"
+  ) +
+  guides(
+    x = guide_axis(title = "Tempo de estudo (Media)"),
+    y = guide_axis(title = "Tempo desocupado (Meses)"),
+    colour = guide_legend(title = "Sexo") #Rotulo do "filtro"
+  )
+
+base_estudo.19 %>% ggplot(
+  aes(
+    x = estudo_med, 
+    y = V12, 
+    colour = V2007, #Sexo como "Filtro"
+    size = V12)  #Tempo desocupado como tamanho
+  ) +
+  geom_point() +
+  labs(
+    title = "Tempo desocupado x Tempo de estudo",
+    subtitle = "PNADc 2019.1"
+  ) +
+  guides(
+    x = guide_axis(title = "Tempo de estudo (Media)"),
+    y = guide_axis(title = "Tempo desocupado (Meses)"),
+    size = guide_legend(title = "Tempo desocupado"), #Rotulo do tamanho
+    colour = guide_legend(title = "Sexo") #Rotulo do "filtro"
+  )
+
+base_estudo.19 %>% ggplot(
+  aes(
+    x = estudo_med, 
+    y = V12, 
+    colour = estudo_med, #Tempo de estudo como "Filtro"
+    size = V12, #Tempo desocupado como tamanho
+    shape = V2007) #Sexo como formato/forma
+  ) +
+  geom_point() +
+  labs(
+    title = "Tempo desocupado x Tempo de estudo",
+    subtitle = "PNADc 2019.1"
+  ) +
+  guides(
+    x = guide_axis(title = "Tempo de estudo (Media)"),
+    y = guide_axis(title = "Tempo desocupado (Meses)"),
+    size = guide_legend(title = "Tempo desocupado"), #Rotulo do tamanho
+    colour = guide_legend(title = "Tempo de estudo"), #Rotulo do "filtro"
+    shape = guide_legend(title = "Sexo") #Rotulo do formato/forma
+  )
+```
+
+### Exercício
+<br/> Reproduza o gráfico a seguir com a base *base_estudo.19*
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = estudo_med, 
+    y = V12, 
+    colour = V12,
+    shape = V2007)
+  ) +
+  geom_point() +
+  labs(
+    title = "Tempo desocupado x Tempo de estudo",
+    subtitle = "PNADc 2019.1"
+  ) +
+  guides(
+    x = guide_axis(title = "Tempo de estudo (Media)"),
+    y = guide_axis(title = "Tempo desocupado (Meses)"),
+    colour = guide_legend(title = "Tempo desocupado"),
+    shape = guide_legend(title = "Sexo")
+  ) +
+  facet_grid(vars(V2007)) +
+  geom_smooth(
+    method = lm,
+    se = FALSE,
+    colour = "purple",
+    size = 0.5
+  ) +
+  scale_color_viridis_b()
+```
+
+## geom_boxplot()
+<br/> Cria um boxplot dos dados selecionados
+<br/> Vamos criar um boxplot com os dados da base *base_sexoraca.18*
+
+```{r}
+base_sexoraca.18 %>% ggplot(
+  aes( #Estetica do grafico
+    x = V2010, #Raca como variavel X
+    y = V403312 #Renda bruta média como variavel Y
+  )
+) + 
+  geom_boxplot() #Geometria box plot
+```
+
+### Exercício
+<br/> Reproduza o gráfico a seguir com a base *base_sexoraca.18*
+
+```{r}
+base_sexoraca.18 %>% ggplot(
+  aes( 
+    x = V2007, 
+    y = V403312
+  )
+) + 
+  geom_boxplot()
+```
+
+<br/> Não tem mais nada de legal pra falar a respeito do boxplot :)
+<br/> Aplicar filtros e facetas acaba por piorar a vizualização desse gráfico
+
+```{r}
+base_sexoraca.18 %>% ggplot(
+  aes( 
+    x = V2010, 
+    y = V403312,
+    fill = V2007 #Aplicando o Sexo como filtro
+  )
+) + 
+  geom_boxplot()
+
+base_sexoraca.18 %>% ggplot(
+  aes( 
+    x = V2010, 
+    y = V403312
+  )
+) + 
+  geom_boxplot() +
+  facet_grid(vars(V2007)) #Facetando o grafico
+```
+
+## geom_histogram & geom_freqpoly
+<br/> Ambas as geometrias utilizam a mesma estética, por isso basta saber como gerar uma e a outra será idêntica.
+
+<br/> Vamos utilizar a base *base_estudo.19* como exemplo
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = V12
+  )
+) +
+  geom_histogram() +
+  geom_freqpoly()
+
+```
+
+<br/> Também é possível aplicar filtros e afins nesse tipo de gráfico
+
+```{r}
+base_estudo.19 %>% ggplot(
+  aes(
+    x = V12,
+    fill = V2007,
+  )
+) +
+  geom_histogram()
+
+base_estudo.19 %>% ggplot(
+  aes(
+    x = V12,
+    colour = V2007,
+  )
+) +
+  geom_freqpoly()
+```
+# Considerações finais e Salvamento de gráficos
+<br/> Ainda há pequenas modificações interessantes que podemos fazer para adicionar os intervalos de confiança aos gráficos de barras e também comparar gráficos de data frames diferentes.
+
+<br/> Para adicionar os intervalos ao gráfico de barras devemos utilizar **geom_errorbar** junto ao **geom_bar**.
+<br/> Junto a isso também podemos comparar os anos de 2018 e 2019 com o pacote **patchwork**
+
+```{r, eval = FALSE}
+install.packages("patchwork")
+```
+```{r, message = FALSE}
+library(patchwork)
+```
+
+
+```{r}
+#Criando o gráfico de renda media x sexo de 2018
+grafico1 <- base_sexo.18 %>% ggplot( #Utilizando a base de dados de 2018
+  aes( #Criando a estetica do grafico
+    x = UF, #UF no eixo X
+    y = V403312, #Renda bruta média no eixo Y
+    fill = V2007 #Sexo como filtro
+    )
+  ) +
+  geom_bar(stat = "identity") + #Geometria de grafico de barras
+  labs( #Adicionando titulos ao grafico
+    title = "Renda media por Sexo", #Titulo
+    subtitle = "PNAD 2018" #Subtitulo
+  ) + 
+  geom_errorbar( #Geometria de barra de erros (intervalo de confiança)
+    aes(
+      ymin = V403312 + se, #Especificando o limite superior para Y
+      ymax = V403312 - se #Especificando o limite inferior para Y
+    ),
+    colour = "red" #Alterando a cor do intervalo para vermelho
+  ) +
+  guides( #Alterando o rotulo das guias do grafico
+    x = guide_axis(title = "UF", angle = 45), #Rotulo do eixo X, angulo
+    y = guide_axis(title = "Renda"), #Rotulo do eixo Y
+    fill = guide_legend(title = "Sexo") #Rotulo da legenda 
+  ) + 
+  facet_grid( #Facetando o grafico
+    cols = vars(V2007) #Escolha em facetar por colunas e pela variavel Sexo
+    )
+
+grafico1 #Primeiro gráfico
+
+#Criando o gráfico de renda media x sexo de 2018
+#Mesmo gráfico que o anterior porém com a base de 2019
+grafico2 <- base_sexo.19 %>% ggplot(
+  aes(
+    x = UF,
+    y = V403312,
+    fill = V2007
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  labs( 
+    title = "Renda media por Sexo",
+    subtitle = "PNAD 2018" 
+  ) + 
+  geom_errorbar(
+    aes(
+      ymin = V403312 + se,
+      ymax = V403312 - se
+    ),
+    colour = "red"
+  ) +
+  guides(
+    x = guide_axis(title = "UF", angle = 45), 
+    y = guide_axis(title = "Renda"), 
+    fill = guide_legend(title = "Sexo")
+  ) + 
+  facet_grid(
+    cols = vars(V2007)
+    )
+
+grafico2
+
+#Aqui é feita a junção dos dois gráficos em apenas um plot
+g1819 <- grafico1 + grafico2
+
+g1819
+```
+<br/> O salvamento é feito através da função **ggsave**
+
+```{r, message = FALSE}
+ggsave(
+  filename = "grafico_exemplo.pdf", #Nomo do arquivo no diretorio
+  plot = g1819 #Nome do grafico que deseja salvar
+)
+```
+#Exercício
+<br/> Recrie o gráfico a seguir com a base **base_sexoraca.19** e salve em .pdf
+
+```{r, }
+base_sexoraca.19 %>% ggplot(
+  aes(
+    x = V2010,
+    y = V403312
+  )
+) + 
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_errorbar(
+    aes(
+      ymin = V403312 + se,
+      ymax = V403312 - se
+    ),
+    colour = "purple"
+  ) +
+  facet_grid(vars(V2007), vars(V2010)) +
+  guides(
+    x = guide_axis(title = "Raca",angle = 45),
+    y = guide_axis(title = "Renda Bruta (Média)")
+  )
+```
+```{r, eval = FALSE}
+ggsave("grafico_exercicio.pdf")
+```
+
+<br/> mais insformações no [repositório online de ggplot2](https://ggplot2.tidyverse.org/)
+<br/> Também utilize o pacote [PNADc.table](https://github.com/migux14/PNADc.table) para analisar dados da PNAD contínua
